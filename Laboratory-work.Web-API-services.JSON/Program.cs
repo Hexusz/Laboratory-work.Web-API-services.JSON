@@ -36,7 +36,6 @@ namespace Laboratory_work.Web_API_services.JSON
         public Area area { get; set; }
         public Salary salary { get; set; }
         public Type type { get; set; }
-        public Address address { get; set; }
         public object response_url { get; set; }
         public object sort_point_distance { get; set; }
         public Employer employer { get; set; }
@@ -76,40 +75,6 @@ namespace Laboratory_work.Web_API_services.JSON
     {
         public string id { get; set; }
         public string name { get; set; }
-    }
-
-    public class Address
-    {
-        public string city { get; set; }
-        public string street { get; set; }
-        public string building { get; set; }
-        public object description { get; set; }
-        public float lat { get; set; }
-        public float lng { get; set; }
-        public string raw { get; set; }
-        public Metro metro { get; set; }
-        public Metro_Stations[] metro_stations { get; set; }
-        public string id { get; set; }
-    }
-
-    public class Metro
-    {
-        public string station_name { get; set; }
-        public string line_name { get; set; }
-        public string station_id { get; set; }
-        public string line_id { get; set; }
-        public float lat { get; set; }
-        public float lng { get; set; }
-    }
-
-    public class Metro_Stations
-    {
-        public string station_name { get; set; }
-        public string line_name { get; set; }
-        public string station_id { get; set; }
-        public string line_id { get; set; }
-        public float lat { get; set; }
-        public float lng { get; set; }
     }
 
     public class Employer
@@ -486,7 +451,6 @@ namespace Laboratory_work.Web_API_services.JSON
         public Area area { get; set; }
         public Salary salary { get; set; }
         public Type type { get; set; }
-        public Address address { get; set; }
         public bool allow_messages { get; set; }
         public Site site { get; set; }
         public Experience experience { get; set; }
@@ -497,7 +461,7 @@ namespace Laboratory_work.Web_API_services.JSON
         public string description { get; set; }
         public object branded_description { get; set; }
         public object vacancy_constructor_template { get; set; }
-        public object[] key_skills { get; set; }
+        public Key_skills[] key_skills { get; set; }
         public bool accept_handicapped { get; set; }
         public bool accept_kids { get; set; }
         public bool archived { get; set; }
@@ -526,6 +490,10 @@ namespace Laboratory_work.Web_API_services.JSON
     public class Billing_Type
     {
         public string id { get; set; }
+        public string name { get; set; }
+    }
+    public class Key_skills
+    {
         public string name { get; set; }
     }
     public class Site
@@ -567,57 +535,59 @@ namespace Laboratory_work.Web_API_services.JSON
             }
             string myJsonResponseDict = getContent("https://api.hh.ru/dictionaries"); ;
             Rootobject2 dict = JsonConvert.DeserializeObject<Rootobject2>(myJsonResponseDict);
-
-            string myJsonResponse = getContent("https://api.hh.ru/vacancies?per_page=100&page=0"); ;
-            Rootobject tmp = JsonConvert.DeserializeObject<Rootobject>(myJsonResponse);
-
-            foreach (Item itm in tmp.items)
+            for (int i = 0; i < 20; i++)
             {
-                int sal = 0;
+                string myJsonResponse = getContent("https://api.hh.ru/vacancies?per_page=100&page="+i); 
+                Rootobject tmp = JsonConvert.DeserializeObject<Rootobject>(myJsonResponse);
 
-                if (itm.salary != null)
-                    if (itm.salary.from != null && itm.salary.to != null)
-                    {
-                        sal = (int)(itm.salary.from + itm.salary.to) / 2;
-                    }
-                    else
-                    {
-                        if (itm.salary.from == null)
-                            sal = (int)itm.salary.to;
-                        else
-                            sal = (int)itm.salary.from;
-                    }
-                if (itm.salary != null)
-                    if (itm.salary.currency != "RUR" && sal != 0)
-                    {
-                        foreach (Currency cur in dict.currency)
+                foreach (Item itm in tmp.items)
+                {
+                    int sal = 0;
+
+                    if (itm.salary != null)
+                        if (itm.salary.from != null && itm.salary.to != null)
                         {
-                            if (cur.code == itm.salary.currency)
+                            sal = (int)(itm.salary.from + itm.salary.to) / 2;
+                        }
+                        else
+                        {
+                            if (itm.salary.from == null)
+                                sal = (int)itm.salary.to;
+                            else
+                                sal = (int)itm.salary.from;
+                        }
+                    if (itm.salary != null)
+                        if (itm.salary.currency != "RUR" && sal != 0)
+                        {
+                            foreach (Currency cur in dict.currency)
                             {
-                                sal = (int)(sal / cur.rate);
+                                if (cur.code == itm.salary.currency)
+                                {
+                                    sal = (int)(sal / cur.rate);
+                                }
                             }
                         }
-                    }
 
-                if (sal >= 120000)
-                {
-                    Console.WriteLine(itm.name + " ЗП = " + sal);
-                    string myJsonResponseSkill = getContent("https://api.hh.ru/vacancies/" + itm.id); ;
-                    Rootobject3 skill = JsonConvert.DeserializeObject<Rootobject3>(myJsonResponseSkill);
-                    if (skill.key_skills.Length>0)
+                    if (sal > 0 && (sal >= 120000 || sal <= 15000))
                     {
-                        foreach (object key in skill.key_skills)
+                        Console.WriteLine(itm.name + " ЗП = " + sal);
+                        string myJsonResponseSkill = getContent("https://api.hh.ru/vacancies/" + itm.id); ;
+                        Rootobject3 skill = JsonConvert.DeserializeObject<Rootobject3>(myJsonResponseSkill);
+                        if (skill.key_skills.Length > 0)
                         {
-                            Console.WriteLine(key+" ");
+                            foreach (Key_skills key in skill.key_skills)
+                            {
+                                Console.WriteLine("-----" + key.name);
+                            }
+                        }
+                        else
+                        {
+                            Console.WriteLine("-----Поле ключевые навыки пустое");
                         }
                     }
-                    else
-                    {
-                        Console.WriteLine("Поле ключевые навыки пустое");
-                    }
+
+
                 }
-
-
             }
 
 
